@@ -166,10 +166,12 @@ function Should-ExcludeDirectory {
 
 function Find-AllDevelopmentTools {
     param([string]$BasePath, [int]$MaxDepth, [string[]]$ExcludePaths, [Nullable[datetime]]$SinceTime)
-    
+
     Write-Log "Starting comprehensive tool scan..." "INFO"
+    $sinceUtc = $null
     if ($SinceTime) {
-        Write-Log "Incremental mode: directories untouched since $($SinceTime.Value.ToString('yyyy-MM-dd HH:mm:ss')) will be skipped." "INFO"
+        $sinceUtc = $SinceTime.Value.ToUniversalTime()
+        Write-Log "Incremental mode: skipping directories whose last modification is on or before $($sinceUtc.ToString('yyyy-MM-dd HH:mm:ss')) UTC." "INFO"
     }
     
     $excludeDirs = @(
@@ -220,11 +222,14 @@ function Find-AllDevelopmentTools {
 
             if (Should-ExcludeDirectory -Directory $dirInfo -ExcludePatterns $excludeDirs) { continue }
 
-            if ($SinceTime -and $depth -gt 0) {
-                $lastWriteUtc = $dirInfo.LastWriteTimeUtc
-                $lastAccessUtc = $dirInfo.LastAccessTimeUtc
-                if ($lastWriteUtc -le $SinceTime.Value -and $lastAccessUtc -le $SinceTime.Value) {
-                    Write-Log "[Skip] $($dirInfo.FullName) unchanged since last scan." "INFO"
+            if ($sinceUtc -and $depth -gt 0) {
+                $lastChangeUtc = $dirInfo.LastWriteTimeUtc
+                if ($dirInfo.CreationTimeUtc -gt $lastChangeUtc) {
+                    $lastChangeUtc = $dirInfo.CreationTimeUtc
+                }
+
+                if ($lastChangeUtc -le $sinceUtc) {
+                    Write-Log "[Skip] $($dirInfo.FullName) unchanged since last scan (LastWrite: $($dirInfo.LastWriteTimeUtc.ToString('u')))." "INFO"
                     continue
                 }
             }
@@ -693,10 +698,11 @@ function Register-Environment {
 
             if (-not (Test-Path $script:REG_STATE_KEY)) { New-Item -Path $script:REG_STATE_KEY -Force -ErrorAction Stop | Out-Null }
             Set-ItemProperty -Path $script:REG_STATE_KEY -Name "DetectedToolsCount" -Value $detectedTools.Count -ErrorAction Stop
-            foreach ($key in $varsToSet.Keys) { 
-                Set-ItemProperty -Path $script:REG_STATE_KEY -Name $key -Value $varsToSet[$key] -ErrorAction Stop 
+            foreach ($key in $varsToSet.Keys) {
+                Set-ItemProperty -Path $script:REG_STATE_KEY -Name $key -Value $varsToSet[$key] -ErrorAction Stop
             }
-            Set-ItemProperty -Path $script:REG_STATE_KEY -Name "LastScanTimestamp" -Value (Get-Date).ToString("o") -ErrorAction Stop
+            $installScanTimestamp = [datetime]::UtcNow
+            Set-ItemProperty -Path $script:REG_STATE_KEY -Name "LastScanTimestamp" -Value $installScanTimestamp.ToString("o") -ErrorAction Stop
 
             if ($EnableAutoCleanup) {
                 Write-Log "" "INFO"
@@ -754,14 +760,16 @@ function Update-Environment {
 
         $lastScanTime = $null
         if ($state.PSObject.Properties.Name -contains "LastScanTimestamp") {
-            try { $lastScanTime = [datetime]::Parse($state.LastScanTimestamp) } catch {}
+            try {
+                $lastScanTime = [datetime]::Parse($state.LastScanTimestamp, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind)
+            } catch {}
         }
 
         $excludeList = if ($ExcludePaths) { $ExcludePaths -split ',' | ForEach-Object { $_.Trim() } } else { @() }
-        $scanTimestamp = Get-Date
+        $scanTimestamp = [datetime]::UtcNow
         $detectedTools = Find-AllDevelopmentTools -BasePath $driveInfo.DriveLetter `
             -MaxDepth $ScanDepth -ExcludePaths $excludeList -SinceTime $lastScanTime
-        
+
         if ($detectedTools.Count -eq 0) {
             Write-Log "No new tools detected since last scan." "INFO"
             Set-ItemProperty -Path $script:REG_STATE_KEY -Name "LastScanTimestamp" -Value $scanTimestamp.ToString("o") -ErrorAction SilentlyContinue
@@ -903,7 +911,7 @@ function Unregister-Environment {
         }
         
         $metaProps = @("OriginalPath", "AddedPaths", "DriveLetter", "SerialNumber", 
-                      "Label", "DetectedToolsCount", "LastScanTimestamp", "PSPath", "PSParentPath", 
+                      "Label", "DetectedToolsCount", "LastScanTimestamp", "PSPath", "PSParentPath",
                       "PSChildName", "PSDrive", "PSProvider")
         
         $varsToRemove = $state.psobject.Properties | Where-Object { $_.Name -notin $metaProps }
