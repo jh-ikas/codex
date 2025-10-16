@@ -133,7 +133,7 @@ function Get-PortableDriveInfo {
     }
 }
 
-function Should-ExcludeDirectory {
+function Test-DirectoryExcluded {
     param(
         [System.IO.DirectoryInfo]$Directory,
         [string[]]$ExcludePatterns
@@ -220,7 +220,7 @@ function Find-AllDevelopmentTools {
             $dirInfo = $frame.Directory
             $depth = $frame.Depth
 
-            if (Should-ExcludeDirectory -Directory $dirInfo -ExcludePatterns $excludeDirs) { continue }
+            if (Test-DirectoryExcluded -Directory $dirInfo -ExcludePatterns $excludeDirs) { continue }
 
             if ($sinceUtc -and $depth -gt 0) {
                 $lastChangeUtc = $dirInfo.LastWriteTimeUtc
@@ -270,7 +270,7 @@ function Find-AllDevelopmentTools {
             if ($depth -lt $MaxDepth) {
                 try {
                     foreach ($subDir in $dirInfo.GetDirectories()) {
-                        if (Should-ExcludeDirectory -Directory $subDir -ExcludePatterns $excludeDirs) { continue }
+                        if (Test-DirectoryExcluded -Directory $subDir -ExcludePatterns $excludeDirs) { continue }
                         $stack.Push(@{ Directory = $subDir; Depth = $depth + 1 })
                     }
                 } catch {
