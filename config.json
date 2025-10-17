@@ -1,0 +1,99 @@
+{
+  "DETECTION_PATTERNS": {
+    "IDE_Executables": [
+      "devenv.exe",
+      "Code.exe",
+      "code.exe",
+      "idea64.exe",
+      "studio64.exe",
+      "eclipse.exe",
+      "pycharm64.exe",
+      "webstorm64.exe",
+      "rider64.exe",
+      "clion64.exe"
+    ],
+    "Language_Executables": [
+      "java.exe",
+      "javac.exe",
+      "python.exe",
+      "node.exe",
+      "ruby.exe",
+      "php.exe",
+      "go.exe",
+      "rustc.exe",
+      "dotnet.exe",
+      "gcc.exe",
+      "g++.exe",
+      "clang.exe"
+    ],
+    "Build_Executables": [
+      "mvn.cmd",
+      "mvn.bat",
+      "gradle.bat",
+      "gradle.cmd",
+      "ant.bat",
+      "msbuild.exe",
+      "make.exe",
+      "cmake.exe",
+      "ninja.exe"
+    ],
+    "VCS_Executables": [
+      "git.exe",
+      "svn.exe",
+      "hg.exe"
+    ],
+    "Database_Executables": [
+      "mysql.exe",
+      "mysqld.exe",
+      "psql.exe",
+      "postgres.exe",
+      "mongo.exe",
+      "mongod.exe",
+      "redis-server.exe",
+      "sqlite3.exe"
+    ],
+    "Other_Executables": [
+      "docker.exe",
+      "kubectl.exe",
+      "terraform.exe",
+      "vagrant.exe",
+      "adb.exe",
+      "anaconda.exe"
+    ]
+  },
+  "ENV_VAR_PATTERNS": {
+    "java.exe|javac.exe": {
+      "VarName": "JAVA_HOME",
+      "ParentLevel": 1,
+      "AddBinToPath": true
+    },
+    "python.exe": {
+      "VarName": "PYTHON_HOME",
+      "ParentLevel": 0,
+      "AdditionalPaths": [
+        "Scripts"
+      ]
+    },
+    "node.exe": {
+      "VarName": "NODE_HOME",
+      "ParentLevel": 0,
+      "AddBinToPath": true,
+      "CheckNpmGlobal": true
+    },
+    "mvn.cmd|mvn.bat": {
+      "VarName": "MAVEN_HOME",
+      "ParentLevel": 1,
+      "AddBinToPath": true
+    },
+    "gradle.bat|gradle.cmd": {
+      "VarName": "GRADLE_HOME",
+      "ParentLevel": 1,
+      "AddBinToPath": true
+    },
+    "go.exe": {
+      "VarName": "GOROOT",
+      "ParentLevel": 1,
+      "AddBinToPath": true
+    }
+  }
+}
